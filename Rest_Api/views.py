@@ -31,6 +31,8 @@ class CurrentOrganizations(APIView):
     Если пользователь создает организацию без параметра, либо пытается создать вторую, получает error message
 
     Метод DELETE получает параметр @id и удаляет организацию. Удалить может только создатель.
+
+    /user/invite/ работает с приглашением пользователей в организацию
     """
 
     permission_classes = [permissions.IsAuthenticated, ]
@@ -71,8 +73,25 @@ class CurrentOrganizations(APIView):
 class UserInvite(APIView):
     """Метод GET возвращает приглашенных в организацию пользователей, в которой вы являетесь создателем
 
+        Метод POST получает параметр @email и добавляет пользователя в органищацию
+        Метод DELETE получает параметр @email и удаляет пользователя из организации
+
     """
     permission_classes = [permissions.IsAuthenticated, ]
+
+    def get_user_to_invite(self, request):
+        user_email = request.data.get('email')
+        organization, user_to_invite, error = None, None, None
+
+        if not user_email:
+            error = {'error': 'Параметр email не передан. Читайте спецификацию'}
+        else:
+            try:
+                user_to_invite = User.objects.get(email=user_email)
+                organization = Organization.objects.get(founder=request.user)
+            except ObjectDoesNotExist:
+                error = {'error': 'Пользователя с таким email не существует, либо у вас нет организации'}
+        return organization, user_to_invite, error
 
     def get(self, request):
         try:
@@ -84,9 +103,24 @@ class UserInvite(APIView):
         return Response({'response': serializer.data})
 
     def post(self, request):
-        user_email = request.data.get('email')
-        user_to_invite = User.objects.get(email=user_email)
-        organization = Organization.objects.get(founder=request.user)
-        organization.invitedUser.add(user_to_invite)
-        organization.save()
-        return Response({'request': 'Пользователь ' + user_email + ' добавлен '})
+        (organization, user_to_invite, error) = self.get_user_to_invite(request)
+        if error:
+            return Response(error)
+        if not organization.invitedUser.filter(email=user_to_invite.email):
+            organization.invitedUser.add(user_to_invite)
+            organization.save()
+        else:
+            return Response({'error': 'Пользователь ' + user_to_invite.email + ' уже приглашен в организацию'})
+        return Response({'request': 'Пользователь ' + user_to_invite.email + ' добавлен '})
+
+    def delete(self, request):
+        (organization, user_to_invite, error) = self.get_user_to_invite(request)
+        if error:
+            return Response(error)
+        if organization.invitedUser.filter(email=user_to_invite.email):
+            organization.invitedUser.remove(user_to_invite)
+            organization.save()
+        else:
+            return Response({'error': 'Пользователь с ' + user_to_invite.email + ' не состоит в организации'})
+        return Response({'request': 'Пользователь ' + user_to_invite.email + ' удален '})
+
