@@ -1,5 +1,6 @@
 from django.contrib import admin
-from Rest_Api.models import *
+
+from org_api.models import Organization
 
 
 class OrganizationAdmin(admin.ModelAdmin):
@@ -7,9 +8,4 @@ class OrganizationAdmin(admin.ModelAdmin):
     filter_horizontal = ('invitedUser',)
 
 
-class ToDoTaskAdmin(admin.ModelAdmin):
-    list_display = ('creator', 'createDate', 'is_complete', 'taskSubject')
-
-
-admin.site.register(ToDoTask, ToDoTaskAdmin)
 admin.site.register(Organization, OrganizationAdmin)

@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class RestApiConfig(AppConfig):
-    name = 'Rest_Api'
+    name = 'todo_api'
