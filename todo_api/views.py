@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from org_api.models import Organization
 from todo_api.models import ToDoTask
 from todo_api.serializers import ToDoTaskDetailSerializer, ToDoTaskSerializer
-from todo_list.permissions import IsFounderOrInvited, IsFounder
+from todo_list.permissions import IsFounderOrInvited
 
 
 class TaskList(generics.ListAPIView):
@@ -37,6 +37,7 @@ class TaskListDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CreateTask(APIView):
+    """Метод POST получает параметр @text и создает задачу для компании, создателем которой вы являетесь"""
 
     def post(self, request):
         try:
@@ -50,4 +51,3 @@ class CreateTask(APIView):
         ToDoTask.objects.create(creator_org=organization, taskSubject=task_subject)
 
         return Response({'response': 'Задача |' + task_subject + '| создана'})
-

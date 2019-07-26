@@ -1,4 +1,3 @@
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models import Q
 
@@ -7,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from org_api.models import Organization
-from org_api.serializers import OrganizationSerializer
+from org_api.serializers import OrganizationSerializer, OrganizationDetailSerializer
+from todo_list.permissions import IsFounder
 
 
 class AccessibleOrganizations(generics.ListAPIView):
@@ -26,32 +26,8 @@ class AccessibleOrganizations(generics.ListAPIView):
         return list(response)
 
 
-class DeleteOrganization(APIView):
-
-    """ Метод GET отдает организацию, создателем которой вы являетесь
-        Метод DELETE удаляет организацию, создателем которой вы являетесь. Удалить может только создатель.
-    """
-
-    def get(self, request):
-        try:
-            organization = Organization.objects.get(founder=request.user)
-            serializer = OrganizationSerializer(organization)
-            return Response({'response': serializer.data})
-        except ObjectDoesNotExist:
-            return Response({'error': 'У вас нет созданых организаций'})
-
-    def delete(self, request):
-        try:
-            organization = Organization.objects.get(founder=request.user)
-            organization.delete()
-            return Response({'response': 'Организация удалена!'})
-
-        except ObjectDoesNotExist:
-            return Response({'error': 'Невозможно удалить организацию, которой не существует'})
-
-
 class CreateOrganization(APIView):
-    """Метод POST получается параметр @name и создает организацию с таким именем.
+    """Метод POST получает параметр @name и создает организацию с таким именем.
     Пользователь может создать только одну организацию"""
 
     def post(self, request):
@@ -64,3 +40,13 @@ class CreateOrganization(APIView):
                 return Response({'response': 'Организация создана!'})
             except IntegrityError:
                 return Response({'error': 'Параметры не верны, проверьте спецификацию!'})
+
+
+class DetailOrganization(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Методы для редактирования и удаления отдельных организаций.
+    """
+
+    serializer_class = OrganizationDetailSerializer
+    queryset = Organization.objects.all()
+    permission_classes = (IsFounder, )

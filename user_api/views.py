@@ -1,4 +1,6 @@
-from django.contrib.auth.models import User
+from rest_framework.permissions import AllowAny
+
+from custom_user.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import generics
 from rest_framework.response import Response
@@ -6,14 +8,33 @@ from rest_framework.views import APIView
 
 from org_api.models import Organization
 from todo_list.permissions import IsCurrentUser
-from user_api.serializers import UserSerializer
+from user_api.serializers import UserSerializer, CreateUserSerializer
 
 
-class CurrentUser(generics.RetrieveUpdateAPIView):
+class CurrentUser(generics.ListAPIView):
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        current_user = User.objects.filter(id=self.request.user.id)
+        return current_user
+
+
+class DetailUser(generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = UserSerializer
     queryset = User.objects.all()
     permission_classes = (IsCurrentUser,)
+
+
+class CreateUser(generics.CreateAPIView):
+    serializer_class = CreateUserSerializer
+    permission_classes = (AllowAny, )
+    queryset = User.objects.all()
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        instance.set_password(instance.password)
+        instance.save()
 
 
 class InviteUser(APIView):
@@ -37,6 +58,7 @@ class InviteUser(APIView):
             except ObjectDoesNotExist:
                 error = {'error': 'Пользователя с таким email не существует, либо у вас нет организации'}
         return organization, user_to_invite, error
+
 
     def get(self, request):
         try:
